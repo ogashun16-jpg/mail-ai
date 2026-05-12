@@ -1,0 +1,21 @@
+{
+  "name": "mail-ai",
+  "version": "1.0.0",
+  "description": "iPad向けAI統合メールアプリ - Replit版",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "imapflow": "^1.0.190",
+    "mailparser": "^3.7.2",
+    "nodemailer": "^6.9.16",
+    "dotenv": "^16.4.7",
+    "express-session": "^1.18.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: mail-ai
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
