@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mail · AI">
+<meta name="theme-color" content="#1D4A8F">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Mail · AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #fafaf7; --bg-card: #ffffff; --bg-sidebar: #f4f3ee; --bg-list: #fbfaf6;
+  --ink: #1a1a1a; --ink-2: #4a4a4a; --ink-3: #8a8a85;
+  --line: #e6e3db; --line-2: #d4d0c4;
+  --accent: #1d4a8f; --accent-soft: #e8efff;
+  --ai: #6b4ea8; --ai-soft: #f0ebf8;
+  --ai-gradient: linear-gradient(135deg, #6b4ea8 0%, #9b7cd4 100%);
+  --warn: #c9591f;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; overflow: hidden; overscroll-behavior: none; }
+
+/* ===== Login Screen ===== */
+.login-screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); z-index: 1000; padding: 40px; }
+.login-card { width: 100%; max-width: 440px; background: white; border: 1px solid var(--line); border-radius: 18px; padding: 32px; box-shadow: 0 20px 60px rgba(0,0,0,0.08); }
+.login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.login-orb { width: 44px; height: 44px; border-radius: 50%; background: var(--ai-gradient); box-shadow: 0 4px 16px rgba(107,78,168,0.3); }
+.login-title { font-family: 'Fraunces', serif; font-style: italic; font-size: 28px; font-weight: 600; }
+.login-sub { color: var(--ink-3); font-size: 13px; margin-bottom: 24px; }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 11px; font-weight: 600; color: var(--ink-3); margin-bottom: 5px; letter-spacing: 0.05em; text-transform: uppercase; }
+.field input { width: 100%; padding: 11px 14px; border: 1px solid var(--line); border-radius: 9px; font-size: 14px; font-family: inherit; background: var(--bg-list); }
+.field input:focus { outline: none; border-color: var(--accent); background: white; box-shadow: 0 0 0 3px var(--accent-soft); }
+.advanced-toggle { font-size: 12px; color: var(--accent); cursor: pointer; padding: 8px 0; font-weight: 500; }
+.advanced { display: none; padding: 12px; background: var(--bg-list); border-radius: 9px; margin-bottom: 14px; }
+.advanced.open { display: block; }
+.advanced-row { display: grid; grid-template-columns: 1fr 100px 80px; gap: 8px; margin-bottom: 8px; align-items: end; }
+.advanced-row label { font-size: 10px; }
+.btn-primary { width: 100%; padding: 13px; background: var(--ink); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; margin-top: 6px; }
+.btn-primary:disabled { opacity: 0.5; }
+.error-msg { padding: 10px 12px; background: #fde4dc; color: var(--warn); border-radius: 8px; font-size: 12.5px; margin-bottom: 12px; }
+
+/* ===== Main App ===== */
+.app { display: none; width: 100vw; height: 100vh; flex-direction: column; }
+.app.shown { display: flex; }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: rgba(250,250,247,0.85); backdrop-filter: saturate(160%) blur(20px); -webkit-backdrop-filter: saturate(160%) blur(20px); border-bottom: 1px solid var(--line); flex-shrink: 0; padding-top: max(12px, env(safe-area-inset-top)); }
+.brand { font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px; font-style: italic; display: flex; align-items: center; gap: 10px; }
+.brand::before { content: ''; width: 20px; height: 20px; background: var(--ai-gradient); border-radius: 50%; }
+.topbar-actions { display: flex; gap: 6px; align-items: center; }
+.icon-btn { width: 34px; height: 34px; border: none; background: transparent; border-radius: 8px; color: var(--ink-2); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.icon-btn:active { background: var(--bg-sidebar); }
+.compose-btn { display: flex; align-items: center; gap: 6px; padding: 7px 13px; background: var(--ink); color: white; border: none; border-radius: 8px; font-weight: 500; font-size: 13px; cursor: pointer; }
+
+/* ===== Responsive Layout ===== */
+.layout { display: grid; grid-template-columns: 220px 340px 1fr; flex: 1; overflow: hidden; position: relative; }
+
+/* iPad横向き・大型タブレット (1025px以上はそのまま3ペイン) */
+@media (max-width: 1100px) { .layout { grid-template-columns: 200px 300px 1fr; } }
+
+/* iPad縦向き・小型タブレット (701px〜900px): 2ペイン + 詳細オーバーレイ */
+@media (max-width: 900px) and (min-width: 701px) {
+  .layout { grid-template-columns: 200px 1fr; }
+  .detail-pane {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    transform: translateX(100%);
+    transition: transform 0.25s ease-out;
+    background: var(--bg-card);
+  }
+  .detail-pane.active-pane { transform: translateX(0); }
+  .back-btn { display: flex !important; }
+}
+
+/* iPhone・小型スマートフォン (700px以下): 1ペインずつ切り替え */
+@media (max-width: 700px) {
+  .layout { display: block; position: relative; height: 100%; }
+  .sidebar, .list-pane, .detail-pane {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-right: none;
+    transform: translateX(100%);
+    transition: transform 0.25s ease-out;
+    z-index: 1;
+  }
+  /* 戻る方向アニメーション用 */
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.active-pane { transform: translateX(0); z-index: 3; display: flex; }
+  .list-pane.active-pane { transform: translateX(0); z-index: 2; display: flex; }
+  .detail-pane.active-pane { transform: translateX(0); z-index: 4; display: flex; }
+
+  /* 戻るボタンを表示 */
+  .back-btn { display: flex !important; }
+
+  /* iPhone向け細かい調整 */
+  .topbar { padding: 10px 14px; padding-top: max(10px, env(safe-area-inset-top)); }
+  .brand { font-size: 18px; }
+  .compose-btn { padding: 7px 11px; font-size: 12px; }
+  .list-header { padding: 12px 16px 10px; }
+  .list-title { font-size: 20px; }
+  .mail-item { padding: 12px 16px; }
+
+  /* メール詳細をより広く表示 */
+  .detail-scroll { padding: 16px 14px 60px !important; }
+  .mail-title { font-size: 20px; line-height: 1.3; margin-bottom: 12px; }
+  .mail-header { padding-bottom: 14px; }
+  .sender-row { flex-wrap: wrap; gap: 10px; }
+  .sender-avatar { width: 36px; height: 36px; font-size: 14px; }
+  .sender-name { font-size: 13px; }
+  .sender-email { font-size: 11px; }
+  .sender-meta { font-size: 10.5px; margin-top: 3px; }
+  .mail-time-right { width: 100%; margin-top: 4px; font-size: 10.5px; }
+  .detail-actions { padding: 6px 10px; flex-wrap: wrap; gap: 3px; }
+  .action-btn { padding: 5px 7px; font-size: 11px; }
+  .action-btn svg { width: 12px; height: 12px; }
+  .ai-card { margin: 16px 0 18px; }
+  .ai-header { padding: 12px 14px 6px; }
+  .ai-body { padding: 4px 14px 14px; }
+  .ai-summary-text { font-size: 13px; line-height: 1.6; }
+  .mail-body { font-size: 14.5px; padding-top: 18px; line-height: 1.75; }
+  .ai-actions { gap: 4px; }
+  .ai-mini-btn { font-size: 10px; padding: 3px 7px; }
+
+  /* フルスクリーンモード（メールボックスを完全に隠してメール詳細を全画面表示） */
+  .app.fullscreen-detail .topbar { display: none; }
+  .app.fullscreen-detail .detail-pane.active-pane { z-index: 200; }
+  .app.fullscreen-detail .detail-scroll { padding-top: max(16px, env(safe-area-inset-top)) !important; }
+  .fullscreen-toggle { display: flex !important; }
+  .fullscreen-toggle.exit { display: none; }
+  .app.fullscreen-detail .fullscreen-toggle { display: none !important; }
+  .app.fullscreen-detail .fullscreen-toggle.exit { display: flex !important; }
+
+  .compose-modal { height: 100%; border-radius: 0; max-width: 100%; }
+  .modal-backdrop { padding: 0; }
+  .ai-toolbar { padding: 9px 16px; }
+  .lang-toggle { padding: 2px; }
+  .lang-option { padding: 5px 9px; font-size: 10.5px; }
+  .compose-field { padding: 10px 16px; }
+  .compose-editor { padding: 16px; font-size: 14px; }
+  .login-card { padding: 24px 20px; }
+}
+
+.sidebar { background: var(--bg-sidebar); border-right: 1px solid var(--line); padding: 16px 12px; overflow-y: auto; flex-direction: column; display: flex; }
+.account-pill { display: flex; align-items: center; gap: 10px; padding: 9px 10px; background: white; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 16px; }
+.account-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,#1d4a8f,#2e74b5); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; }
+.account-info { overflow: hidden; flex: 1; }
+.account-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.account-email { font-size: 10px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.logout-btn { font-size: 10px; color: var(--ink-3); border: none; background: none; cursor: pointer; padding: 4px; }
+.section-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); padding: 0 10px; margin: 12px 0 6px; }
+.nav-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--ink-2); font-weight: 500; margin-bottom: 2px; }
+.nav-item:active { background: rgba(0,0,0,0.04); }
+.nav-item.active { background: var(--accent); color: white; }
+.nav-item.active .nav-count { color: rgba(255,255,255,0.85); }
+.nav-icon { width: 18px; display: flex; justify-content: center; }
+.nav-label { flex: 1; }
+.nav-count { font-size: 11px; color: var(--ink-3); font-weight: 500; }
+
+.list-pane { background: var(--bg-list); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+.list-header { padding: 14px 18px 10px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+.list-header-text { flex: 1; }
+.list-title { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; font-style: italic; letter-spacing: -0.02em; }
+.list-subtitle { font-size: 11px; color: var(--ink-3); display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+.list-subtitle .dot { width: 6px; height: 6px; background: #4caf50; border-radius: 50%; }
+.list-subtitle .dot.syncing { background: var(--accent); animation: pulse 1.4s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.refresh-btn { padding: 6px; }
+.list-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.list-empty { padding: 60px 24px; text-align: center; color: var(--ink-3); font-size: 13px; }
+.mail-item { padding: 13px 18px; border-bottom: 1px solid var(--line); cursor: pointer; position: relative; }
+.mail-item:active { background: rgba(0,0,0,0.03); }
+.mail-item.selected { background: var(--bg-card); border-left: 3px solid var(--accent); padding-left: 15px; }
+.mail-item.unread::before { content: ''; position: absolute; left: 7px; top: 21px; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+.mail-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+.mail-from { font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mail-item.unread .mail-from { font-weight: 700; }
+.mail-time { font-size: 10.5px; color: var(--ink-3); white-space: nowrap; margin-left: 8px; }
+.mail-subject { font-size: 12px; font-weight: 500; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mail-preview { font-size: 11px; color: var(--ink-3); line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.mail-tags { display: flex; gap: 4px; margin-top: 5px; }
+.tag { font-size: 9px; padding: 1px 6px; border-radius: 100px; font-weight: 600; }
+.tag.ai { background: var(--ai-soft); color: var(--ai); }
+.tag.attach { background: var(--bg-sidebar); color: var(--ink-2); }
+
+.detail-pane { background: var(--bg-card); display: flex; flex-direction: column; overflow: hidden; }
+.detail-empty { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: var(--ink-3); }
+.detail-empty-icon { font-size: 56px; opacity: 0.3; }
+.detail-actions { display: flex; align-items: center; justify-content: space-between; padding: 10px 22px; border-bottom: 1px solid var(--line); }
+.action-group { display: flex; gap: 4px; }
+.action-btn { padding: 6px 11px; background: transparent; border: none; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--ink-2); cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.action-btn:active { background: var(--bg-sidebar); }
+.detail-scroll { flex: 1; overflow-y: auto; padding: 24px 36px 60px; -webkit-overflow-scrolling: touch; }
+@media (max-width: 1024px) { .detail-scroll { padding: 24px 24px 60px; } }
+.mail-header { padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.mail-title { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 600; font-style: italic; line-height: 1.25; margin-bottom: 16px; }
+.sender-row { display: flex; align-items: flex-start; gap: 12px; }
+.sender-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg,#d97a3e,#b85a22); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px; flex-shrink: 0; }
+.sender-info { flex: 1; min-width: 0; }
+.sender-name { font-size: 13.5px; font-weight: 600; }
+.sender-email { font-size: 11.5px; color: var(--ink-3); margin-top: 1px; word-break: break-all; }
+.sender-meta { font-size: 11px; color: var(--ink-3); margin-top: 5px; }
+.mail-time-right { font-size: 11px; color: var(--ink-3); white-space: nowrap; }
+
+.spam-banner { margin: 20px 0; padding: 12px 14px; background: linear-gradient(135deg,#fff4ec,#ffe8db); border: 1px solid #f5b896; border-radius: 10px; display: flex; gap: 10px; font-size: 12px; color: #7a3a15; }
+.spam-banner-icon { width: 22px; height: 22px; background: var(--warn); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; flex-shrink: 0; }
+.spam-banner-title { font-weight: 700; margin-bottom: 2px; color: #4a1f08; }
+.spam-actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.spam-action-btn { font-size: 10.5px; font-weight: 600; padding: 4px 9px; border: 1px solid var(--warn); background: white; color: var(--warn); border-radius: 100px; cursor: pointer; font-family: inherit; }
+.spam-action-btn.primary { background: var(--warn); color: white; }
+
+.ai-card { margin: 24px 0 28px; background: white; border: 1px solid var(--ai-soft); border-radius: 14px; overflow: hidden; box-shadow: 0 4px 16px rgba(107,78,168,0.06); position: relative; }
+.ai-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--ai-gradient); }
+.ai-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 8px; }
+.ai-title { display: flex; align-items: center; gap: 8px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ai); }
+.ai-pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--ai-gradient); position: relative; }
+.ai-pulse::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; background: var(--ai); opacity: 0.3; animation: pulse-ring 2s infinite; }
+@keyframes pulse-ring { 0%,100% { transform: scale(1); opacity: 0.3 } 50% { transform: scale(1.5); opacity: 0 } }
+.ai-model { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--ink-3); }
+.ai-body { padding: 4px 20px 18px; }
+.ai-loading { padding: 24px; text-align: center; color: var(--ai); font-size: 13px; }
+.ai-loading-dot { display: inline-block; width: 8px; height: 8px; margin: 0 2px; background: var(--ai); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+.ai-loading-dot:nth-child(1) { animation-delay: -0.32s; }
+.ai-loading-dot:nth-child(2) { animation-delay: -0.16s; }
+@keyframes bounce { 0%,80%,100%{transform:scale(0)} 40%{transform:scale(1)} }
+.ai-summary-text { font-size: 12.5px; line-height: 1.7; color: var(--ink-2); white-space: pre-wrap; }
+.ai-summary-text strong { color: var(--ink); font-weight: 700; }
+.ai-trigger { display: flex; align-items: center; gap: 6px; padding: 8px 14px; background: var(--ai-gradient); color: white; border: none; border-radius: 8px; font-size: 12.5px; font-weight: 600; font-family: inherit; cursor: pointer; }
+.ai-actions { display: flex; gap: 5px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--ai-soft); flex-wrap: wrap; }
+.ai-mini-btn { font-size: 10.5px; padding: 3px 9px; border: 1px solid var(--ai-soft); background: white; border-radius: 100px; color: var(--ai); font-weight: 600; cursor: pointer; font-family: inherit; }
+.ai-error { padding: 12px; background: #fde4dc; color: var(--warn); border-radius: 8px; font-size: 12px; margin: 8px 0; }
+
+.mail-body { font-size: 14px; line-height: 1.7; padding-top: 28px; }
+.mail-body p { margin-bottom: 14px; }
+.mail-body pre, .mail-body code { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+/* ===== Compose Modal ===== */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(20,20,20,0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 200; display: none; align-items: flex-end; justify-content: center; padding: 50px 40px 0; }
+.modal-backdrop.open { display: flex; }
+.compose-modal { width: 100%; max-width: 820px; height: calc(100% - 20px); background: white; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; overflow: hidden; animation: slideUp 0.3s cubic-bezier(0.2,0.8,0.2,1); }
+@keyframes slideUp { from{transform:translateY(40px);opacity:0} to{transform:translateY(0);opacity:1} }
+.compose-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 22px; border-bottom: 1px solid var(--line); }
+.compose-title { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; font-style: italic; }
+.compose-body { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+.compose-field { display: flex; align-items: center; padding: 11px 22px; border-bottom: 1px solid var(--line); font-size: 13px; gap: 10px; }
+.compose-field label { width: 45px; color: var(--ink-3); font-weight: 500; font-size: 12px; }
+.compose-field input { flex: 1; border: none; background: transparent; font-size: 13px; outline: none; font-family: inherit; }
+
+.ai-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 22px; background: linear-gradient(180deg,#faf8fd,#f6f1fa); border-bottom: 1px solid var(--ai-soft); gap: 12px; flex-wrap: wrap; }
+.ai-toolbar-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lang-toggle { display: flex; background: white; border: 1px solid var(--ai-soft); border-radius: 7px; padding: 2px; }
+.lang-option { padding: 5px 11px; font-size: 11px; font-weight: 600; border-radius: 5px; cursor: pointer; color: var(--ink-3); border: none; background: transparent; font-family: inherit; }
+.lang-option.active { background: var(--ai-gradient); color: white; }
+.tone-select { font-size: 11px; border: 1px solid var(--ai-soft); background: white; padding: 5px 24px 5px 9px; border-radius: 6px; font-weight: 500; color: var(--ink-2); font-family: inherit; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%236b4ea8' stroke-width='1.5'><path d='M3 5l3 3 3-3'/></svg>"); background-repeat: no-repeat; background-position: right 7px center; background-size: 11px; }
+.ai-generate-btn { display: flex; align-items: center; gap: 6px; padding: 6px 13px; background: var(--ai-gradient); color: white; border: none; border-radius: 7px; font-size: 11.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+.editor-wrap { position: relative; flex: 1; }
+.compose-editor { width: 100%; height: 100%; padding: 20px 22px; font-family: inherit; font-size: 13.5px; line-height: 1.65; border: none; outline: none; resize: none; }
+.ai-thinking { position: absolute; inset: 0; background: rgba(255,255,255,0.92); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 14px; }
+.ai-thinking.show { display: flex; }
+.ai-thinking-orb { width: 50px; height: 50px; border-radius: 50%; background: var(--ai-gradient); animation: orb 1.5s infinite ease-in-out; }
+@keyframes orb { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+.ai-thinking-text { font-family: 'Fraunces', serif; font-style: italic; font-size: 15px; color: var(--ai); font-weight: 500; }
+
+.compose-footer { display: flex; justify-content: space-between; align-items: center; padding: 11px 22px; border-top: 1px solid var(--line); background: var(--bg-list); }
+.send-btn { padding: 9px 20px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: inherit; }
+.send-btn:disabled { opacity: 0.5; }
+
+/* ===== Settings Modal ===== */
+.settings-modal { background: white; border-radius: 16px; padding: 24px; max-width: 480px; width: 100%; }
+
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 11px 18px; border-radius: 100px; font-size: 13px; z-index: 300; box-shadow: 0 8px 24px rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s; }
+.toast.show { opacity: 1; }
+.toast.error { background: var(--warn); }
+
+/* ===== Attachments ===== */
+.attachments-section { margin: 18px 0; padding: 14px; background: var(--bg-list); border-radius: 12px; border: 1px solid var(--line); }
+.attachments-label { font-size: 11px; font-weight: 600; color: var(--ink-3); margin-bottom: 10px; letter-spacing: 0.05em; }
+.attachments-grid { display: flex; flex-direction: column; gap: 8px; }
+.attachment-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: white; border: 1px solid var(--line); border-radius: 8px; transition: all 0.15s; }
+.attachment-card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+.attachment-icon { width: 38px; height: 38px; background: var(--bg-sidebar); border: 1px solid var(--line); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: var(--ink-2); flex-shrink: 0; }
+.attachment-icon.image { background: #e8f5e9; color: #2e7d32; border-color: #c8e6c9; }
+.attachment-icon.pdf { background: #ffebee; color: #c62828; border-color: #ffcdd2; }
+.attachment-info { flex: 1; min-width: 0; overflow: hidden; }
+.attachment-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+.attachment-size { font-size: 10.5px; color: var(--ink-3); margin-top: 1px; }
+.attachment-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.attach-action-btn { width: 32px; height: 32px; border: 1px solid var(--line); background: white; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; padding: 0; }
+.attach-action-btn:active, .attach-action-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+
+/* ===== Preview Modal ===== */
+.preview-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 300; display: none; flex-direction: column; }
+.preview-modal.open { display: flex; }
+.preview-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: rgba(0,0,0,0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding-top: max(14px, env(safe-area-inset-top)); flex-shrink: 0; }
+.preview-title { color: white; font-size: 14px; font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0 12px; }
+.preview-action-btn { width: 38px; height: 38px; background: rgba(255,255,255,0.15); border: none; border-radius: 8px; color: white; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.preview-action-btn:hover { background: rgba(255,255,255,0.25); }
+.preview-content { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.preview-content img { max-width: 100%; max-height: 100%; }
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
+
+/* mobile back button & fullscreen toggle - 表示制御は上のresponsive sectionで行う */
+.back-btn { display: none; }
+.fullscreen-toggle { display: none; }
+</style>
+</head>
+<body>
+
+<!-- ===== Login Screen ===== -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-orb"></div>
+      <div>
+        <div class="login-title">Mail · AI</div>
+        <div class="login-sub" style="margin-bottom:0;">iPad向けAI統合メール</div>
+      </div>
+    </div>
+
+    <div id="loginError"></div>
+
+    <div class="field">
+      <label>メールアドレス</label>
+      <input type="email" id="loginEmail" placeholder="your-name@sritakada.com.my" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>パスワード</label>
+      <input type="password" id="loginPassword" placeholder="メールパスワード" autocomplete="current-password">
+    </div>
+
+    <div class="advanced-toggle" onclick="document.getElementById('loginAdvanced').classList.toggle('open')">▸ 詳細設定（サーバー）</div>
+
+    <div class="advanced" id="loginAdvanced">
+      <div style="font-size:11px;color:var(--ink-3);margin-bottom:8px;font-weight:600;">IMAP受信</div>
+      <div class="advanced-row">
+        <div><label>ホスト</label><input type="text" id="imapHost" value="mail.sritakada.com.my"></div>
+        <div><label>ポート</label><input type="number" id="imapPort" value="993"></div>
+        <div><label>SSL</label><select id="imapSSL"><option value="true">ON</option><option value="false">OFF</option></select></div>
+      </div>
+      <div style="font-size:11px;color:var(--ink-3);margin:10px 0 8px;font-weight:600;">SMTP送信</div>
+      <div class="advanced-row">
+        <div><label>ホスト</label><input type="text" id="smtpHost" value="mail.sritakada.com.my"></div>
+        <div><label>ポート</label><input type="number" id="smtpPort" value="465"></div>
+        <div><label>SSL</label><select id="smtpSSL"><option value="true">ON</option><option value="false">OFF</option></select></div>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="loginBtn" onclick="login()">ログイン</button>
+
+    <div style="font-size:11px;color:var(--ink-3);text-align:center;margin-top:14px;line-height:1.5;">
+      パスワードはサーバーのセッションに保存され、<br>あなたのメールサーバー認証にのみ使用されます
+    </div>
+  </div>
+</div>
+
+<!-- ===== Main App ===== -->
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="brand">Mail<span style="color:var(--ai);font-size:11px;font-weight:500;margin-left:3px;letter-spacing:0;">·AI</span></div>
+    <div class="topbar-actions">
+      <button class="icon-btn" onclick="refreshList()" title="更新">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M14 3v4h-4M2 13v-4h4"/><path d="M13 6a5.5 5.5 0 0 0-10 1M3 10a5.5 5.5 0 0 0 10-1"/></svg>
+      </button>
+      <button class="compose-btn" onclick="openCompose()">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+        作成
+      </button>
+    </div>
+  </div>
+
+  <div class="layout" id="layout">
+    <aside class="sidebar active-pane" id="sidebar">
+      <div class="account-pill">
+        <div class="account-avatar" id="accountAvatar">?</div>
+        <div class="account-info">
+          <div class="account-name" id="accountName">Loading...</div>
+          <div class="account-email" id="accountEmail">-</div>
+        </div>
+        <button class="logout-btn" onclick="logout()" title="ログアウト">⏻</button>
+      </div>
+
+      <div class="section-label">メールボックス</div>
+      <div id="folderList"></div>
+
+      <div class="section-label" style="margin-top:auto;">設定</div>
+      <div class="nav-item" onclick="showApiKeyModal()">
+        <span class="nav-icon">🔑</span>
+        <span class="nav-label">Claude APIキー</span>
+      </div>
+    </aside>
+
+    <section class="list-pane" id="listPane">
+      <div class="list-header">
+        <button class="icon-btn back-btn" onclick="showPane('sidebar')">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 4 6 8l4 4"/></svg>
+        </button>
+        <div class="list-header-text">
+          <h1 class="list-title" id="listTitle">受信箱</h1>
+          <div class="list-subtitle" id="listSubtitle"><span class="dot"></span> 接続中…</div>
+        </div>
+        <button class="icon-btn refresh-btn" onclick="refreshList()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3v4h-4M2 13v-4h4"/><path d="M13 6a5.5 5.5 0 0 0-10 1M3 10a5.5 5.5 0 0 0 10-1"/></svg>
+        </button>
+      </div>
+      <div class="list-scroll" id="listScroll">
+        <div class="list-empty">読み込み中…</div>
+      </div>
+    </section>
+
+    <section class="detail-pane" id="detailPane">
+      <div class="detail-empty" id="detailEmpty">
+        <div class="detail-empty-icon">✉️</div>
+        <div>メールを選択してください</div>
+      </div>
+      <div id="detailContent" style="display:none;flex-direction:column;height:100%;"></div>
+    </section>
+  </div>
+</div>
+
+<!-- ===== Compose Modal ===== -->
+<div class="modal-backdrop" id="composeModal">
+  <div class="compose-modal">
+    <div class="compose-header">
+      <div class="compose-title" id="composeTitle">新規メール</div>
+      <button class="icon-btn" onclick="closeCompose()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+    </div>
+    <div class="compose-body">
+      <div class="compose-field">
+        <label>宛先</label>
+        <input type="text" id="composeTo" placeholder="メールアドレス（複数はカンマ区切り）">
+      </div>
+      <div class="compose-field">
+        <label>件名</label>
+        <input type="text" id="composeSubject" placeholder="件名">
+      </div>
+
+      <div class="ai-toolbar">
+        <div class="ai-toolbar-left">
+          <div class="lang-toggle">
+            <button class="lang-option active" data-lang="ja" onclick="setLang('ja')">日本語</button>
+            <button class="lang-option" data-lang="en" onclick="setLang('en')">English</button>
+            <button class="lang-option" data-lang="auto" onclick="setLang('auto')">Auto</button>
+          </div>
+          <select class="tone-select" id="composeTone">
+            <option value="polite">丁寧</option>
+            <option value="formal">フォーマル</option>
+            <option value="concise">簡潔</option>
+            <option value="casual">カジュアル</option>
+          </select>
+        </div>
+        <button class="ai-generate-btn" onclick="promptInstruction()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 2l1.5 4.5L14 8l-4.5 1.5L8 14l-1.5-4.5L2 8l4.5-1.5L8 2z"/></svg>
+          AIで下書き
+        </button>
+      </div>
+
+      <div class="editor-wrap">
+        <div class="ai-thinking" id="aiThinking">
+          <div class="ai-thinking-orb"></div>
+          <div class="ai-thinking-text">下書きを生成中…</div>
+          <div style="font-size:10.5px;color:var(--ink-3);font-family:monospace;">Claude is composing</div>
+        </div>
+        <textarea class="compose-editor" id="composeBody" placeholder="本文を入力するか、上の「AIで下書き」ボタンを押してください…"></textarea>
+      </div>
+    </div>
+    <div class="compose-footer">
+      <button class="action-btn" onclick="closeCompose()">キャンセル</button>
+      <button class="send-btn" id="sendBtn" onclick="sendMail()">
+        送信
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h9M8 4l4 4-4 4"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== API Key Modal ===== -->
+<div class="modal-backdrop" id="apiKeyModal" style="align-items:center;padding:40px;">
+  <div class="settings-modal">
+    <div style="font-family:Fraunces,serif;font-style:italic;font-size:20px;font-weight:600;margin-bottom:6px;">Claude APIキー</div>
+    <div style="font-size:12px;color:var(--ink-3);margin-bottom:16px;line-height:1.5;">
+      <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--accent);">console.anthropic.com</a> でキーを取得できます。
+      キーはサーバー環境変数として設定されます。
+    </div>
+    <div style="font-size:12px;background:var(--bg-list);padding:12px;border-radius:8px;line-height:1.6;">
+      <strong>設定方法:</strong><br>
+      Replit左サイドバーの「Secrets」（🔒鍵アイコン）を開き、<br>
+      <code style="background:white;padding:2px 6px;border-radius:3px;">ANTHROPIC_API_KEY</code> という名前で<br>
+      <code style="background:white;padding:2px 6px;border-radius:3px;">sk-ant-...</code> 形式のキーを保存してください。<br><br>
+      設定後はReplitを再起動してください。
+    </div>
+    <button class="btn-primary" style="margin-top:18px;" onclick="document.getElementById('apiKeyModal').classList.remove('open')">閉じる</button>
+  </div>
+</div>
+
+<!-- ===== Preview Modal (添付ファイル) ===== -->
+<div class="preview-modal" id="previewModal">
+  <div class="preview-header">
+    <button class="preview-action-btn" onclick="closePreview()" title="閉じる">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+    </button>
+    <div class="preview-title" id="previewTitle">添付ファイル</div>
+    <button class="preview-action-btn" onclick="downloadFromPreview()" title="ダウンロード">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2v9M5 8l3 3 3-3M2 14h12"/></svg>
+    </button>
+  </div>
+  <div class="preview-content" id="previewContent"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
